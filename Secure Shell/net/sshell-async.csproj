@@ -3,16 +3,16 @@
     <ProjectType>Local</ProjectType>
     <ProductVersion>8.0.50727</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{F7E21004-385E-43DF-BD66-387DB450A2E2}</ProjectGuid>
-    <AssemblyName>sftpserver-async</AssemblyName>
+    <ProjectGuid>{F7E21005-385E-43DF-BD66-387DB450A2E2}</ProjectGuid>
+    <AssemblyName>sshell-async</AssemblyName>
     <DefaultClientScript>JScript</DefaultClientScript>
     <DefaultHTMLPageLayout>Grid</DefaultHTMLPageLayout>
     <DefaultTargetSchema>IE50</DefaultTargetSchema>
     <DelaySign>false</DelaySign>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <OutputFileFolder>.\sftpserver-async</OutputFileFolder>
-    <RootNamespace>sftpserver</RootNamespace>
+    <OutputFileFolder>.\sshell-async</OutputFileFolder>
+    <RootNamespace>sshell</RootNamespace>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
@@ -23,6 +23,6 @@
     <PackageReference Include="nsoftware.IPWorksSSH" Version="22.*" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="sftpserver-async.cs" />
+    <Compile Include="sshell-async.cs" />
   </ItemGroup>
 </Project>

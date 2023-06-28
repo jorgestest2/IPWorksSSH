@@ -1,14 +1,5 @@
-# Sample Projects
-
-## Requirements
-These sample projects require the latest version of IPWorks SSH.  Please download from:
-
-> Download: [https://www.nsoftware.com/ipworksssh](https://www.nsoftware.com/ipworksssh)
-
-## Sample Projects
-The sample projects demonstrate the usage of the IPWorks SSH components in a simple, 
-straightforward way.  They are not complete applications and they are not intended to be.
-Error handling and other checks are simplified for clarity.
+# IPWorksSSH Sample Projects
+The provided sample projects offer a concise yet effective demonstration of the IPWorks components, showcasing their usage in a straightforward manner. While they are not intended to be complete applications, they serve as valuable illustrations of key features. To enhance clarity, error handling and checks are simplified, allowing users to focus on the core functionality. These projects provide a solid foundation for developers to explore and customize, enabling them to construct more elaborate applications while understanding the fundamental concepts and mechanisms at play.
 
 | Sample Project | Description |
 | --- | --- |
@@ -21,6 +12,9 @@ Error handling and other checks are simplified for clarity.
 | [SSH Reverse Tunnel](./SSH%20Reverse%20Tunnel) | Uses the SSHReverseTunnel component to connect to an SSH server and request port forwarding back to the local machine. |
 | [SSH Tunnel](./SSH%20Tunnel) | Uses the SSHTunnel component to accept incoming plain text connections and tunnel them through SSH. |
 | [Secure Shell](./Secure%20Shell) | Shows how to use the SShell component to remotely and securely execute commands. |
+
+## Requirements
+IPWorks SSH 2022 libraries for the corresponding edition are required to run these samples.  Free download from: [https://www.nsoftware.com/ipworksssh](https://www.nsoftware.com/ipworksssh)
 
 ## Support
 If you have questions or need help, please contact support@nsoftware.com or explore other support options 

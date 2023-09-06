@@ -13,51 +13,50 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using nsoftware.async.IPWorksSSH;
 
-class sftpserverDemo
+class sshserverDemo
 {
-	private static Sftpserver sftpserver = new nsoftware.async.IPWorksSSH.Sftpserver();
+  private static Sshserver sshserver = new nsoftware.async.IPWorksSSH.Sshserver();
 
   static async Task Main(string[] args)
   {
-    sftpserver.OnConnectionRequest += sftpserver_OnConnectionRequest;
-    sftpserver.OnSSHUserAuthRequest += sftpserver_OnSSHUserAuthRequest;
-    sftpserver.OnLog += sftpserver_OnLog;
-    sftpserver.OnConnected += sftpserver_OnConnected;
-    sftpserver.OnDisconnected += sftpserver_OnDisconnected;
-    sftpserver.OnFileOpen += sftpserver_OnFileOpen;
-    sftpserver.OnFileClose += sftpserver_OnFileClose;
-    sftpserver.OnFileRemove += sftpserver_OnFileRemove;
-    sftpserver.OnDirCreate += sftpserver_OnDirCreate;
-    sftpserver.OnDirRemove += sftpserver_OnDirRemove;
-    sftpserver.OnError += sftpserver_OnError;
+    sshserver.OnConnectionRequest += sshserver_OnConnectionRequest;
+    sshserver.OnSSHUserAuthRequest += sshserver_OnSSHUserAuthRequest;
+    sshserver.OnLog += sshserver_OnLog;
+    sshserver.OnConnected += sshserver_OnConnected;
+    sshserver.OnDisconnected += sshserver_OnDisconnected;
+    sshserver.OnError += sshserver_OnError;
+    sshserver.OnSSHChannelOpened += sshserver_OnSSHChannelOpened;
+    sshserver.OnSSHStatus += sshserver_OnSSHStatus;
+    sshserver.OnSSHChannelOpenRequest += sshserver_OnSSHChannelOpenRequest;
+    sshserver.OnSSHServiceRequest += sshserver_OnSSHServiceRequest;
+    sshserver.OnSSHChannelClosed += sshserver_OnSSHChannelClosed;
+    sshserver.OnSSHChannelRequest += sshserver_OnSSHChannelRequest;
+    sshserver.OnSSHChannelRequested += sshserver_OnSSHChannelRequested;
 
     try
     {
-      Console.WriteLine("usage: sftpserver [/port port] [/root rootdir]\n");
+      Console.WriteLine("usage: sshserver [/port port]\n");
       Console.WriteLine("  port         the port to listen on (optional, default 22)");
-      Console.WriteLine("  rootdir      the root directory of the server (optional, default current directory)");
-      Console.WriteLine("\nExample: sftpserver /port 1234 /root c:\\sftpdemo\n");
+      Console.WriteLine("\nExample: sshserver /port 1234\n");
 
       Dictionary<string, string> myArgs = ConsoleDemo.ParseArgs(args);
       int port = myArgs.ContainsKey("port") ? int.Parse(myArgs["port"]) : 22;
-      string rootDir = myArgs.ContainsKey("root") ? myArgs["root"] : "./";
 
       // Change this to the path to the server's SSH certificate store (e.g. a .pfx or .pem file).
-      const string CERT_STORE = "..\\..\\..\\sftpserver.pfx";
+      const string CERT_STORE = "MY";
 
       // Change this to the certificate store password.
-      const string CERT_PASS = "demo";
+      const string CERT_PASS = "";
 
-      // Set up the SFTP server.
-      sftpserver.SSHCert = new Certificate(CertStoreTypes.cstAuto, CERT_STORE, CERT_PASS, "*");
-      sftpserver.LocalPort = port;
-      sftpserver.RootDirectory = rootDir;
-      await sftpserver.StartListening();
-      Console.WriteLine("SFTP server started with root directory " + sftpserver.RootDirectory + ". Listening on port " + sftpserver.LocalPort + ".");
+      // Set up the SSH server.
+      sshserver.SSHCert = new Certificate(CertStoreTypes.cstAuto, CERT_STORE, CERT_PASS, "*");
+      sshserver.LocalPort = port;
+      await sshserver.StartListening();
+      Console.WriteLine("SSH server started. Listening on port " + sshserver.LocalPort + ".");
       Console.WriteLine("Note: For the purposes of this demo, you can authenticate with any user and any password.");
 
       Console.WriteLine("Type \"?\" for a list of commands.");
-      Console.Write("sftpserver> ");
+      Console.Write("sshserver> ");
       string command;
       string[] arguments;
       while (true)
@@ -65,7 +64,7 @@ class sftpserverDemo
         command = Console.ReadLine();
         arguments = command.Split();
 
-        if (arguments[0].Equals("?") || arguments[0].Equals("help"))
+        if (arguments[0] == "?" || arguments[0] == "help")
         {
           Console.WriteLine("Commands: ");
           Console.WriteLine("  ?                            display the list of valid commands");
@@ -74,24 +73,24 @@ class sftpserverDemo
           Console.WriteLine("  disconnect <id>              disconnect client by id");
           Console.WriteLine("  quit                         exit the application");
         }
-        else if (arguments[0].Equals("quit") || arguments[0].Equals("exit"))
+        else if (arguments[0] == "quit" || arguments[0] == "exit")
         {
-          await sftpserver.Shutdown();
-          Console.WriteLine("SFTP server stopped.");
+          await sshserver.Shutdown();
+          Console.WriteLine("SSH server stopped.");
           break;
         }
-        else if (arguments[0].Equals("users"))
+        else if (arguments[0] == "users")
         {
-          foreach (SFTPConnection conn in sftpserver.Connections.Values)
+          foreach (SSHConnection conn in sshserver.Connections.Values)
           {
             Console.WriteLine(conn.ConnectionId);
           }
         }
-        else if (arguments[0].Equals("disconnect"))
+        else if (arguments[0] == "disconnect")
         {
-          if (arguments.Length > 1) await sftpserver.Disconnect(arguments[1]);
+          if (arguments.Length > 1) await sshserver.Disconnect(arguments[1]);
         }
-        else if (arguments[0].Equals(""))
+        else if (arguments[0] == "")
         {
           // Do nothing.
         }
@@ -100,7 +99,7 @@ class sftpserverDemo
           Console.WriteLine("Invalid command.");
         } // End of command checking.
 
-        Console.Write("sftpserver> ");
+        Console.Write("sshserver> ");
       }
     }
     catch (Exception ex)
@@ -121,12 +120,12 @@ class sftpserverDemo
 
   #region "Events"
 
-  private static void sftpserver_OnConnectionRequest(object sender, SftpserverConnectionRequestEventArgs e)
+  private static void sshserver_OnConnectionRequest(object sender, SshserverConnectionRequestEventArgs e)
   {
     Log(e.Address + ":" + e.Port.ToString() + " is attempting to connect.");
   }
 
-  private static void sftpserver_OnSSHUserAuthRequest(object sender, SftpserverSSHUserAuthRequestEventArgs e)
+  private static void sshserver_OnSSHUserAuthRequest(object sender, SshserverSSHUserAuthRequestEventArgs e)
   {
     // Here is where you would check that the "user" and "password" arguments match e.User and e.AuthParam respectively.
     // For the purposes of this demo, all users are accepted.
@@ -135,61 +134,62 @@ class sftpserverDemo
     return;
   }
 
-  private static void sftpserver_OnLog(object sender, SftpserverLogEventArgs e)
+  private static void sshserver_OnLog(object sender, SshserverLogEventArgs e)
   {
     Log(e.ConnectionId, e.Message);
   }
 
-  private static void sftpserver_OnConnected(object sender, SftpserverConnectedEventArgs e)
+  private static void sshserver_OnConnected(object sender, SshserverConnectedEventArgs e)
   {
     Log(e.ConnectionId, "Now Connected - " + e.Description + " (" + e.StatusCode.ToString() + ")");
   }
 
-  private static void sftpserver_OnDisconnected(object sender, SftpserverDisconnectedEventArgs e)
+  private static void sshserver_OnDisconnected(object sender, SshserverDisconnectedEventArgs e)
   {
     Log(e.ConnectionId, "Now Disconnected - " + e.Description + " (" + e.StatusCode.ToString() + ")");
   }
 
-  private static void sftpserver_OnFileOpen(object sender, SftpserverFileOpenEventArgs e)
-  {
-    string operation = "";
-
-    if ((e.Flags & 1) != 0)
-    {
-      // A read operation.
-      operation = "downloading";
-    }
-    if ((e.Flags & 2) != 0)
-    {
-      // A write operation.
-      operation = "uploading";
-    }
-    if (!e.BeforeExec) Log(e.User + " started " + operation + " " + e.Path);
-  }
-
-  private static void sftpserver_OnFileClose(object sender, SftpserverFileCloseEventArgs e)
-  {
-    Log(e.User + " transferred " + e.Path);
-  }
-
-  private static void sftpserver_OnFileRemove(object sender, SftpserverFileRemoveEventArgs e)
-  {
-    if (!e.BeforeExec) Log(e.User + " deleted a file: " + e.Path);
-  }
-
-  private static void sftpserver_OnDirCreate(object sender, SftpserverDirCreateEventArgs e)
-  {
-    if (!e.BeforeExec) Log(e.User + " created a directory: " + e.Path);
-  }
-
-  private static void sftpserver_OnDirRemove(object sender, SftpserverDirRemoveEventArgs e)
-  {
-    if (!e.BeforeExec) Log(e.User + " deleted a directory: " + e.Path);
-  }
-
-  private static void sftpserver_OnError(object sender, SftpserverErrorEventArgs e)
+  private static void sshserver_OnError(object sender, SshserverErrorEventArgs e)
   {
     Log(e.ConnectionId, "Error - " + e.Description + " (" + e.ErrorCode.ToString() + ")");
+  }
+
+  private static void sshserver_OnSSHChannelOpened(object sender, SshserverSSHChannelOpenedEventArgs e)
+  {
+    Log(e.ConnectionId, "SSH Channel Opened - " + e.ChannelId);
+  }
+
+  private static void sshserver_OnSSHStatus(object sender, SshserverSSHStatusEventArgs e)
+  {
+    Log(e.ConnectionId, e.Message);
+  }
+
+  private static void sshserver_OnSSHChannelOpenRequest(object sender, SshserverSSHChannelOpenRequestEventArgs e)
+  {
+    Log(e.ConnectionId, "SSH Channel Open Request - " + e.ChannelId + " (" + e.Service + ")");
+    e.Accept = true;
+  }
+
+  private static void sshserver_OnSSHServiceRequest(object sender, SshserverSSHServiceRequestEventArgs e)
+  {
+    Log(e.ConnectionId, "SSH Service Request - " + e.Service);
+    e.Accept = true;
+  }
+
+  private static void sshserver_OnSSHChannelClosed(object sender, SshserverSSHChannelClosedEventArgs e)
+  {
+    Log(e.ConnectionId, "SSH Channel Closed - " + e.ChannelId);
+  }
+
+  private static void sshserver_OnSSHChannelRequest(object sender, SshserverSSHChannelRequestEventArgs e)
+  {
+    Log(e.ConnectionId, "SSH Channel Request - " + e.ChannelId + " (Request type " + e.RequestType + ")");
+    e.Success = true;
+  }
+
+  private static void sshserver_OnSSHChannelRequested(object sender, SshserverSSHChannelRequestedEventArgs e)
+  {
+    Log(e.ConnectionId, "SSH Channel Requested - " + e.ChannelId + " (Request type " + e.RequestType + ")");
   }
 
   #endregion

@@ -13,37 +13,48 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using nsoftware.async.IPWorksSSH;
 
-class sshellDemo
+class sshtunnelDemo
 {
-  private static Sshell sshell = new nsoftware.async.IPWorksSSH.Sshell();
+  private static Sshtunnel sshtunnel = new nsoftware.async.IPWorksSSH.Sshtunnel();
 
   static async Task Main(string[] args)
   {
-    if (args.Length < 6)
+    if (args.Length < 12)
     {
-      Console.WriteLine("usage: sshell /s hostserver /u user /p password\n");
-      Console.WriteLine("  hostserver   the host ssh server to connect to");
-      Console.WriteLine("  user         the username to use for authentication");
-      Console.WriteLine("  password     the password to use for authentication");
-      Console.WriteLine("\nExample: sshell /s 192.168.1.2 /u myusername /p mypassword\n");
+      Console.WriteLine("usage: sshtunnel /port port /s hostserver /u user /p password /f forwardhost /fp forwardport\n");
+      Console.WriteLine("  port            the local port for incoming connections");
+      Console.WriteLine("  hostserver      the host ssh server to tunnel incoming connections through");
+      Console.WriteLine("  user            the username to use for authentication");
+      Console.WriteLine("  password        the password to use for authentication");
+      Console.WriteLine("  forwardhost     the remote host to forward connections to");
+      Console.WriteLine("  forwardport     the remote port to forward connections to");
+      Console.WriteLine("\nExample: sshtunnel /port 777 /s 192.168.1.2 /u myusername /p mypassword /f www.microsoft.com /fp 80\n");
     }
     else
     {
-      sshell.OnSSHServerAuthentication += sshell_OnSSHServerAuthentication;
-      sshell.OnStderr += sshell_OnStderr;
-      sshell.OnStdout += sshell_OnStdout;
+      sshtunnel.OnSSHStatus += sshtunnel_OnSSHStatus;
+      sshtunnel.OnSSHServerAuthentication += sshtunnel_OnSSHServerAuthentication;
+      sshtunnel.OnError += sshtunnel_OnError;
+      sshtunnel.OnConnected += sshtunnel_OnConnected;
+      sshtunnel.OnDisconnected += sshtunnel_OnDisconnected;
 
       try
       {
         Dictionary<string, string> myArgs = ConsoleDemo.ParseArgs(args);
 
-        sshell.SSHAuthMode = SshellSSHAuthModes.amPassword;
-        sshell.SSHHost = myArgs["s"];
-        sshell.SSHUser = myArgs["u"];
-        sshell.SSHPassword = myArgs["p"];
+        sshtunnel.LocalPort = int.Parse(myArgs["port"]);
+        sshtunnel.SSHAuthMode = SshtunnelSSHAuthModes.amPassword;
+        sshtunnel.SSHHost = myArgs["s"];
+        sshtunnel.SSHPort = 22;
+        sshtunnel.SSHUser = myArgs["u"];
+        sshtunnel.SSHPassword = myArgs["p"];
 
-        // Default port for SSH is 22.
-        await sshell.SSHLogon(sshell.SSHHost, 22);
+        sshtunnel.SSHForwardHost = myArgs["f"];
+        sshtunnel.SSHForwardPort = int.Parse(myArgs["fp"]);
+
+        Console.WriteLine("Starting SSH tunnel...");
+        await sshtunnel.StartListening();
+        Console.WriteLine("SSH tunnel started. Listening on local port " + sshtunnel.LocalPort + ".");
 
         Console.WriteLine("Type \"quit\" to exit the application.");
         string command;
@@ -53,12 +64,12 @@ class sshellDemo
 
           if (command == "quit" || command == "exit")
           {
-            await sshell.SSHLogoff();
+            await sshtunnel.Shutdown();
             break;
           }
           else
           {
-            await sshell.Execute(command);
+            await sshtunnel.DoEvents();
           }
         }
       }
@@ -71,7 +82,12 @@ class sshellDemo
 
   #region "Events"
 
-  private static void sshell_OnSSHServerAuthentication(object sender, SshellSSHServerAuthenticationEventArgs e)
+  private static void sshtunnel_OnSSHStatus(object sender, SshtunnelSSHStatusEventArgs e)
+  {
+    Console.WriteLine(e.Message);
+  }
+
+  private static void sshtunnel_OnSSHServerAuthentication(object sender, SshtunnelSSHServerAuthenticationEventArgs e)
   {
     if (e.Accept) return;
     Console.Write("Server provided the following certificate:\nIssuer: " + e.CertIssuer + "\nSubject: " + e.CertSubject + "\n");
@@ -80,14 +96,20 @@ class sshellDemo
     if (Console.Read() == 'y') e.Accept = true;
   }
 
-  private static void sshell_OnStderr(object sender, SshellStderrEventArgs e)
+  private static void sshtunnel_OnError(object sender, SshtunnelErrorEventArgs e)
   {
-    Console.WriteLine("Error: " + e.Text);
+    Console.WriteLine("Error: " + e.ErrorCode + ", " + e.Description);
   }
 
-  private static void sshell_OnStdout(object sender, SshellStdoutEventArgs e)
+  private static void sshtunnel_OnConnected(object sender, SshtunnelConnectedEventArgs e)
   {
-    Console.Write(e.Text);
+    Console.WriteLine("Connected with status code " + e.StatusCode + " and description " + e.Description);
+  }
+
+  private static void sshtunnel_OnDisconnected(object sender, SshtunnelDisconnectedEventArgs e)
+  {
+    Console.WriteLine("Disconnected with status code " + e.StatusCode + " and description " + e.Description);
+    Environment.Exit(0);
   }
 
   #endregion

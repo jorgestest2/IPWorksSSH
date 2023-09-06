@@ -194,4 +194,12 @@ class ConsoleDemo
     }
     return dict;
   }
+
+  public static string Prompt(string prompt, string defaultVal)
+  {
+    Console.Write(prompt + (defaultVal.Length > 0 ? " [" + defaultVal + "]": "") + ": ");
+    string val = Console.ReadLine();
+    if (val.Length == 0) val = defaultVal;
+    return val;
+  }
 }

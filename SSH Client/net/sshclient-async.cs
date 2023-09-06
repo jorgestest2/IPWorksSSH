@@ -13,52 +13,61 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using nsoftware.async.IPWorksSSH;
 
-class sshellDemo
+class sshclientDemo
 {
-  private static Sshell sshell = new nsoftware.async.IPWorksSSH.Sshell();
+  private static Sshclient sshclient = new nsoftware.async.IPWorksSSH.Sshclient();
 
   static async Task Main(string[] args)
   {
     if (args.Length < 6)
     {
-      Console.WriteLine("usage: sshell /s hostserver /u user /p password\n");
+      Console.WriteLine("usage: sshclient /s hostserver /u user /p password\n");
       Console.WriteLine("  hostserver   the host ssh server to connect to");
       Console.WriteLine("  user         the username to use for authentication");
       Console.WriteLine("  password     the password to use for authentication");
-      Console.WriteLine("\nExample: sshell /s 192.168.1.2 /u myusername /p mypassword\n");
+      Console.WriteLine("\nExample: sshclient /s 192.168.1.2 /u myusername /p mypassword\n");
     }
     else
     {
-      sshell.OnSSHServerAuthentication += sshell_OnSSHServerAuthentication;
-      sshell.OnStderr += sshell_OnStderr;
-      sshell.OnStdout += sshell_OnStdout;
+      sshclient.OnSSHStatus += sshclient_OnSSHStatus;
+      sshclient.OnSSHServerAuthentication += sshclient_OnSSHServerAuthentication;
+      sshclient.OnSSHChannelRequest += sshclient_OnSSHChannelRequest;
+      sshclient.OnSSHChannelData += sshclient_OnSSHChannelData;
+      sshclient.OnError += sshclient_OnError;
+      sshclient.OnConnected += sshclient_OnConnected;
+      sshclient.OnDisconnected += sshclient_OnDisconnected;
 
       try
       {
         Dictionary<string, string> myArgs = ConsoleDemo.ParseArgs(args);
 
-        sshell.SSHAuthMode = SshellSSHAuthModes.amPassword;
-        sshell.SSHHost = myArgs["s"];
-        sshell.SSHUser = myArgs["u"];
-        sshell.SSHPassword = myArgs["p"];
+        sshclient.SSHAuthMode = SshclientSSHAuthModes.amPassword;
+        sshclient.SSHHost = myArgs["s"];
+        sshclient.SSHUser = myArgs["u"];
+        sshclient.SSHPassword = myArgs["p"];
 
         // Default port for SSH is 22.
-        await sshell.SSHLogon(sshell.SSHHost, 22);
+        await sshclient.SSHLogon(sshclient.SSHHost, 22);
+
+        string channelId = await sshclient.OpenChannel("session");
+        await sshclient.OpenTerminal(channelId, "vt100", 80, 24, false, "\0");
+        await sshclient.StartService(channelId, "shell", "");
 
         Console.WriteLine("Type \"quit\" to exit the application.");
         string command;
-        while (true)
+        while (sshclient.Channels[channelId].ReadyToSend)
         {
           command = Console.ReadLine();
 
           if (command == "quit" || command == "exit")
           {
-            await sshell.SSHLogoff();
+            await sshclient.CloseChannel(channelId);
+            await sshclient.SSHLogoff();
             break;
           }
           else
           {
-            await sshell.Execute(command);
+            await sshclient.SendText(channelId, command);
           }
         }
       }
@@ -71,7 +80,12 @@ class sshellDemo
 
   #region "Events"
 
-  private static void sshell_OnSSHServerAuthentication(object sender, SshellSSHServerAuthenticationEventArgs e)
+  private static void sshclient_OnSSHStatus(object sender, SshclientSSHStatusEventArgs e)
+  {
+    Console.WriteLine(e.Message);
+  }
+
+  private static void sshclient_OnSSHServerAuthentication(object sender, SshclientSSHServerAuthenticationEventArgs e)
   {
     if (e.Accept) return;
     Console.Write("Server provided the following certificate:\nIssuer: " + e.CertIssuer + "\nSubject: " + e.CertSubject + "\n");
@@ -80,14 +94,30 @@ class sshellDemo
     if (Console.Read() == 'y') e.Accept = true;
   }
 
-  private static void sshell_OnStderr(object sender, SshellStderrEventArgs e)
+  private static void sshclient_OnSSHChannelRequest(object sender, SshclientSSHChannelRequestEventArgs e)
   {
-    Console.WriteLine("Error: " + e.Text);
+    Console.WriteLine(e.ChannelId + ", " + e.RequestType);
   }
 
-  private static void sshell_OnStdout(object sender, SshellStdoutEventArgs e)
+  private static void sshclient_OnSSHChannelData(object sender, SshclientSSHChannelDataEventArgs e)
   {
-    Console.Write(e.Text);
+    Console.WriteLine(e.ChannelData);
+  }
+
+  private static void sshclient_OnError(object sender, SshclientErrorEventArgs e)
+  {
+    Console.WriteLine("Error: " + e.ErrorCode + ", " + e.Description);
+  }
+
+  private static void sshclient_OnConnected(object sender, SshclientConnectedEventArgs e)
+  {
+    Console.WriteLine("Connected with status code " + e.StatusCode + " and description " + e.Description);
+  }
+
+  private static void sshclient_OnDisconnected(object sender, SshclientDisconnectedEventArgs e)
+  {
+    Console.WriteLine("Disconnected with status code " + e.StatusCode + " and description " + e.Description);
+    Environment.Exit(0);
   }
 
   #endregion
